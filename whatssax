@@ -1,0 +1,520 @@
+warn("Loading Panel {255/1250}")
+wait(5)
+warn("Loading Panel {797/1250}")
+wait(2)
+
+warn("Loading Panel {1250/1250}")
+wait(3)
+warn("Injected")
+ 
+local drawing_new = Drawing.new
+
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/oxidepro/themesss/main/xrustuy"))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+  
+local Window = Library:CreateWindow({ Size = UDim2.fromOffset(550, 620),
+Title = "oxide.pro",
+Center = true,
+AutoShow = true,
+})
+
+local Tabs = {
+    ['Main'] = Window:AddTab('Main'),
+    ['FPS'] = Window:AddTab('FPS'),
+    ['UI Settings'] = Window:AddTab('Settings'),
+}
+
+
+local TabBox = Tabs.Main:AddLeftTabbox() -- Add Tabbox on left side
+
+local Tab = TabBox:AddTab('Player Visuals')
+
+Tab:AddToggle('MyToggle', {
+    Text = 'player info',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'Shows ESP', -- Information shown when you hover over the toggle
+
+    Callback = function(Value)
+        assert(Drawing, "missing dependency: 'Drawing'");
+
+        -- variables
+        local Players = game:GetService("Players");
+        local RunService = game:GetService("RunService");
+        local localPlayer = Players.LocalPlayer;
+        local camera = workspace.CurrentCamera;
+        local cache = {};
+        
+        -- constants
+    
+        local NAME_COLOR = Color3.new(1,1,1);
+        local HEALTH_OUTLINE_COLOR = Color3.new(0, 0, 0);
+        local HEALTH_HIGH_COLOR = Color3.new(0, 1, 0);
+        local HEALTH_LOW_COLOR = Color3.new(1, 0, 0);
+        local CHAR_SIZE = Vector2.new(4, 6);
+        
+        -- utils
+        local function create(class, properties)
+            local drawing = Drawing.new(class);
+            for property, value in pairs(properties) do
+                drawing[property] = value;
+            end
+            return drawing;
+        end
+        
+        local function floor2(v)
+            return Vector2.new(math.floor(v.X), math.floor(v.Y));
+        end
+        
+        -- functions
+        local function createEsp(player)
+            local esp = {};
+            esp.name = create("Text", {
+                Color = NAME_COLOR,
+                Font = (syn and not RectDynamic) and 2 or 1,
+                Outline = true,
+                Center = true,
+                Size = 13
+            });
+        
+            esp.healthOutline = create("Line", {
+                Thickness = 3,
+                Color = HEALTH_OUTLINE_COLOR
+            });
+        
+            esp.health = create("Line", {
+                Thickness = 1
+            });
+        
+            cache[player] = esp;
+        end
+        
+        local function removeEsp(player)
+            local esp = cache[player];
+            if not esp then return end
+        
+            for _, drawing in pairs(esp) do
+                drawing:Remove();
+            end
+        
+            cache[player] = nil;
+        end
+        
+        local function updateEsp()
+            for player, esp in pairs(cache) do
+                local character, team = player.Character, player.Team;
+                if character and (not team or team ~= localPlayer.Team) then
+                    local cframe = character:GetPivot();
+                    local screen, onScreen = camera:WorldToViewportPoint(cframe.Position);
+        
+                    if onScreen then
+                        local frustumHeight = math.tan(math.rad(camera.FieldOfView * 0.5)) * 2 * screen.Z;
+                        local size = camera.ViewportSize.Y / frustumHeight * CHAR_SIZE;
+                        local position = Vector2.new(screen.X, screen.Y);
+                        esp.name.Text = string.lower(player.Name);
+                        esp.name.Position = floor2(position - Vector2.yAxis * (size.Y * 0.5 + esp.name.TextBounds.Y + 2));
+        
+                        local humanoid = character:FindFirstChildOfClass("Humanoid");
+                        local health = (humanoid and humanoid.Health or 100) / 100;
+        
+                        esp.healthOutline.From = floor2(position - size * 0.5) - Vector2.xAxis * 5;
+                        esp.healthOutline.To = floor2(position - size * Vector2.new(0.5, -0.5)) - Vector2.xAxis * 5;
+        
+                        esp.health.From = esp.healthOutline.To;
+                        esp.health.To = floor2(esp.healthOutline.To:Lerp(esp.healthOutline.From, health));
+                        esp.health.Color = HEALTH_LOW_COLOR:Lerp(HEALTH_HIGH_COLOR, health);
+        
+                        esp.healthOutline.From -= Vector2.yAxis;
+                        esp.healthOutline.To += Vector2.yAxis;
+                    end
+        
+                    for _, drawing in pairs(esp) do
+                        drawing.Visible = onScreen;
+                    end
+                else
+                    for _, drawing in pairs(esp) do
+                        drawing.Visible = false;
+                    end
+                end
+            end
+        end
+        
+        -- connections
+        Players.PlayerAdded:Connect(createEsp);
+        Players.PlayerRemoving:Connect(removeEsp);
+        RunService.RenderStepped:Connect(updateEsp);
+        
+        for idx, player in ipairs(Players:GetPlayers()) do
+            if idx ~= 1 then createEsp(player); end
+        end
+    end
+})
+Tab:AddToggle('MyToggle', {
+    Text = 'corner box',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'Shows ESP', -- Information shown when you hover over the toggle
+
+    Callback = function(Value)
+-- Settings
+local Settings = {
+    Box_Color = Color3.fromRGB(255, 0, 0),
+    Box_Thickness = 2,
+    Team_Check = false,
+    Team_Color = false,
+    Autothickness = true
+}
+
+--Locals
+local Space = game:GetService("Workspace")
+local Player = game:GetService("Players").LocalPlayer
+local Camera = Space.CurrentCamera
+
+-- Locals
+local function NewLine(color, thickness)
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.From = Vector2.new(0, 0)
+    line.To = Vector2.new(0, 0)
+    line.Color = color
+    line.Thickness = thickness
+    line.Transparency = 1
+    return line
+end
+
+local function Vis(lib, state)
+    for i, v in pairs(lib) do
+        v.Visible = state
+    end
+end
+
+local function Colorize(lib, color)
+    for i, v in pairs(lib) do
+        v.Color = color
+    end
+end
+
+local Black = Color3.fromRGB(0, 0, 0)
+
+local function Rainbow(lib, delay)
+    for hue = 0, 1, 1/30 do
+        local color = Color3.fromHSV(hue, 0.6, 1)
+        Colorize(lib, color)
+        wait(delay)
+    end
+    Rainbow(lib)
+end
+--Main Draw Function
+local function Main(plr)
+    repeat wait() until plr.Character ~= nil and plr.Character:FindFirstChild("Humanoid") ~= nil
+    local R15
+    if plr.Character.Humanoid.RigType == Enum.HumanoidRigType.R15 then
+        R15 = true
+    else 
+        R15 = false
+    end
+    local Library = {
+        TL1 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+        TL2 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+
+        TR1 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+        TR2 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+
+        BL1 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+        BL2 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+
+        BR1 = NewLine(Settings.Box_Color, Settings.Box_Thickness),
+        BR2 = NewLine(Settings.Box_Color, Settings.Box_Thickness)
+    }
+    coroutine.wrap(Rainbow)(Library, 0.15)
+    local oripart = Instance.new("Part")
+    oripart.Parent = Space
+    oripart.Transparency = 1
+    oripart.CanCollide = false
+    oripart.Size = Vector3.new(1, 1, 1)
+    oripart.Position = Vector3.new(0, 0, 0)
+    --Updater Loop
+    local function Updater()
+        local c 
+        c = game:GetService("RunService").RenderStepped:Connect(function()
+            if plr.Character ~= nil and plr.Character:FindFirstChild("Humanoid") ~= nil and plr.Character:FindFirstChild("HumanoidRootPart") ~= nil and plr.Character.Humanoid.Health > 0 and plr.Character:FindFirstChild("Head") ~= nil then
+                local Hum = plr.Character
+                local HumPos, vis = Camera:WorldToViewportPoint(Hum.HumanoidRootPart.Position)
+                if vis then
+                    oripart.Size = Vector3.new(Hum.HumanoidRootPart.Size.X, Hum.HumanoidRootPart.Size.Y*1.5, Hum.HumanoidRootPart.Size.Z)
+                    oripart.CFrame = CFrame.new(Hum.HumanoidRootPart.CFrame.Position, Camera.CFrame.Position)
+                    local SizeX = oripart.Size.X
+                    local SizeY = oripart.Size.Y
+                    local TL = Camera:WorldToViewportPoint((oripart.CFrame * CFrame.new(SizeX, SizeY, 0)).p)
+                    local TR = Camera:WorldToViewportPoint((oripart.CFrame * CFrame.new(-SizeX, SizeY, 0)).p)
+                    local BL = Camera:WorldToViewportPoint((oripart.CFrame * CFrame.new(SizeX, -SizeY, 0)).p)
+                    local BR = Camera:WorldToViewportPoint((oripart.CFrame * CFrame.new(-SizeX, -SizeY, 0)).p)
+
+                    if Settings.Team_Check then
+                        if plr.TeamColor == Player.TeamColor then
+                            Colorize(Library, Color3.fromRGB(0, 255, 0))
+                        else 
+                            Colorize(Library, Color3.fromRGB(255, 0, 0))
+                        end
+                    end
+
+                    if Settings.Team_Color then
+                        Colorize(Library, plr.TeamColor.Color)
+                    end
+
+                    local ratio = (Camera.CFrame.p - Hum.HumanoidRootPart.Position).magnitude
+                    local offset = math.clamp(1/ratio*750, 2, 300)
+
+                    Library.TL1.From = Vector2.new(TL.X, TL.Y)
+                    Library.TL1.To = Vector2.new(TL.X + offset, TL.Y)
+                    Library.TL2.From = Vector2.new(TL.X, TL.Y)
+                    Library.TL2.To = Vector2.new(TL.X, TL.Y + offset)
+
+                    Library.TR1.From = Vector2.new(TR.X, TR.Y)
+                    Library.TR1.To = Vector2.new(TR.X - offset, TR.Y)
+                    Library.TR2.From = Vector2.new(TR.X, TR.Y)
+                    Library.TR2.To = Vector2.new(TR.X, TR.Y + offset)
+
+                    Library.BL1.From = Vector2.new(BL.X, BL.Y)
+                    Library.BL1.To = Vector2.new(BL.X + offset, BL.Y)
+                    Library.BL2.From = Vector2.new(BL.X, BL.Y)
+                    Library.BL2.To = Vector2.new(BL.X, BL.Y - offset)
+
+                    Library.BR1.From = Vector2.new(BR.X, BR.Y)
+                    Library.BR1.To = Vector2.new(BR.X - offset, BR.Y)
+                    Library.BR2.From = Vector2.new(BR.X, BR.Y)
+                    Library.BR2.To = Vector2.new(BR.X, BR.Y - offset)
+
+                    Vis(Library, true)
+
+                    if Settings.Autothickness then
+                        local distance = (Player.Character.HumanoidRootPart.Position - oripart.Position).magnitude
+                        local value = math.clamp(1/distance*100, 1, 4) --0.1 is min thickness, 6 is max
+                        for u, x in pairs(Library) do
+                            x.Thickness = value
+                        end
+                    else 
+                        for u, x in pairs(Library) do
+                            x.Thickness = Settings.Box_Thickness
+                        end
+                    end
+                else 
+                    Vis(Library, false)
+                end
+            else 
+                Vis(Library, false)
+                if game:GetService("Players"):FindFirstChild(plr.Name) == nil then
+                    for i, v in pairs(Library) do
+                        v:Remove()
+                        oripart:Destroy()
+                    end
+                    c:Disconnect()
+                end
+            end
+        end)
+    end
+    coroutine.wrap(Updater)()
+end
+
+-- Draw Boxes
+for i, v in pairs(game:GetService("Players"):GetPlayers()) do
+    if v.Name ~= Player.Name then
+      coroutine.wrap(Main)(v)
+    end
+end
+
+game:GetService("Players").PlayerAdded:Connect(function(newplr)
+    coroutine.wrap(Main)(newplr)
+end)
+    end
+})
+
+local TabBox = Tabs.Main:AddRightTabbox() -- Add Tabbox on left side
+
+local Tab1 = TabBox:AddTab('combat')
+
+Tab1:AddToggle('MyToggle', {
+    Text = 'silent aim',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'silent aim', -- Information shown when you hover over the toggle
+
+    Callback = function(Value)
+        local CHEAT_CLIENT = {};
+        do
+            do
+                CHEAT_CLIENT.player = game.Players.LocalPlayer;
+                CHEAT_CLIENT.camera = game.Workspace.CurrentCamera;
+                CHEAT_CLIENT.mouse = CHEAT_CLIENT.player:GetMouse();
+            end
+            do
+                CHEAT_CLIENT.get_target = function(self)
+                    local current_target = nil;
+                    local maximum_distance = math.huge;
+                    for i, v in pairs(game.Players:GetPlayers()) do
+                        if (v == game.Players.LocalPlayer) then
+                            continue;
+                        end
+                        if (v.Character and v.Character:FindFirstChild("HumanoidRootPart")) then
+                            local position, on_screen = CHEAT_CLIENT.camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position);
+                            if not on_screen then
+                                continue;
+                            end
+                            local distance = (Vector2.new(position.X, position.Y - game.GuiService:GetGuiInset(game.GuiService).Y) - Vector2.new(CHEAT_CLIENT.mouse.X, CHEAT_CLIENT.mouse.Y)).Magnitude;
+                            if (distance > maximum_distance) then
+                                continue;
+                            end
+                            current_target = v;
+                            maximum_distance = distance;
+                        end
+                    end
+                    return current_target;
+                end;
+                CHEAT_CLIENT.predict_velocity = function(self, target_part, projectile_speed)
+                    local velocity = target_part.Velocity;
+                    local distance = (CHEAT_CLIENT.camera.CFrame.p - target_part.CFrame.p).Magnitude;
+                    local time_to_hit = distance / projectile_speed;
+                    local predicted_position = target_part.CFrame.p + (velocity * time_to_hit);
+                    local delta = (predicted_position - target_part.CFrame.p).Magnitude;
+                    local final_projectile_speed = projectile_speed - (0.013 * (projectile_speed ^ 2) * (time_to_hit ^ 2));
+                    time_to_hit += (delta / final_projectile_speed)
+                    return target_part.CFrame.p + (velocity * time_to_hit);
+                end;
+                CHEAT_CLIENT.predict_drop = function(self, target_part, projectile_speed, projectile_drop)
+                    local distance = (CHEAT_CLIENT.camera.CFrame.p - target_part.CFrame.p).Magnitude;
+                    local time_to_hit = distance / projectile_speed;
+                    local final_projectile_speed = projectile_speed - (0.013 * (projectile_speed ^ 2) * (time_to_hit ^ 2));
+                    time_to_hit += (distance / final_projectile_speed)
+                    local drop_timing = projectile_drop * (time_to_hit ^ 2);
+                    if not tostring(drop_timing):find("nan") then
+                        return drop_timing;
+                    end
+                    return 0;
+                end;
+                CHEAT_CLIENT.get_bullet_atribute = function(self, attribute)
+                    local attribute_value = nil;
+                    local status = game.ReplicatedStorage.Players[CHEAT_CLIENT.player.Name]:FindFirstChild("Status");
+                    if status then
+                        local equipped_tool = status.GameplayVariables.EquippedTool.Value;
+                        if equipped_tool then
+                            local inventory_equipped_tool = game.ReplicatedStorage.Players[CHEAT_CLIENT.player.Name].Inventory:FindFirstChild(tostring(equipped_tool));
+                            if inventory_equipped_tool then
+                                local mag = (inventory_equipped_tool.Attachments:FindFirstChild("Magazine") and inventory_equipped_tool.Attachments:FindFirstChild("Magazine"):FindFirstChildOfClass("StringValue") and inventory_equipped_tool.Attachments:FindFirstChild("Magazine"):FindFirstChildOfClass("StringValue"):FindFirstChild("ItemProperties").LoadedAmmo) or inventory_equipped_tool.ItemProperties:FindFirstChild("LoadedAmmo");
+                                if mag then
+                                    local first_bullet_type = mag:FindFirstChild("1");
+                                    if first_bullet_type then
+                                        attribute_value = game.ReplicatedStorage.AmmoTypes[first_bullet_type:GetAttribute("AmmoType")]:GetAttribute(attribute);
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    return attribute_value;
+                end;
+            end
+        end
+        local silent_aim_hook;
+        silent_aim_hook = hookfunction(require(game.ReplicatedStorage.Modules.FPS.Bullet).CreateBullet, function(...)
+            local args = {...};
+            if CHEAT_CLIENT:get_target() then
+                local attribute_velocity = CHEAT_CLIENT:get_bullet_atribute("MuzzleVelocity");
+                local attribute_drop = CHEAT_CLIENT:get_bullet_atribute("ProjectileDrop");
+                local target_part = CHEAT_CLIENT:get_target() and CHEAT_CLIENT:get_target().Character:FindFirstChild("Head");
+                if (attribute_velocity and attribute_drop and target_part) then
+                    args[9] = {CFrame=CFrame.new(args[9].CFrame.p, CHEAT_CLIENT:predict_velocity(target_part, attribute_velocity) + Vector3.new(0, CHEAT_CLIENT:predict_drop(target_part, attribute_velocity, attribute_drop), 0))};
+                end
+            end
+            return silent_aim_hook(unpack(args));
+        end);
+        
+    end
+})
+
+
+
+
+
+
+Library:SetWatermarkVisibility(true)
+
+local FrameTimer = tick()
+local FrameCounter = 0;
+local FPS = 60;
+
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+    FrameCounter += 1;
+
+    if (tick() - FrameTimer) >= 1 then
+        FPS = FrameCounter;
+        FrameTimer = tick();
+        FrameCounter = 0;
+    end;
+
+    Library:SetWatermark((" oxide.pro | membership : free | "..game.Players.LocalPlayer.Name.." | PD "):format(
+        math.floor(FPS),
+        math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+    ));
+end);
+
+Library.KeybindFrame.Visible = true;
+
+Library:OnUnload(function()
+    WatermarkConnection:Disconnect()
+
+    print('Unloaded!')
+    Library.Unloaded = true
+end)
+
+local MenuGroup = Tabs['UI Settings']:AddRightGroupbox('Menu')
+
+MenuGroup:AddButton('Unload', function() Library:Unload() end)
+MenuGroup:AddButton("Rejoin Server", function()
+Library:Notify("Rejoining", 30)		
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+ 
+local Rejoin = coroutine.create(function()
+    local Success, ErrorMessage = pcall(function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
+ 
+    if ErrorMessage and not Success then
+        warn(ErrorMessage)
+    end
+end)
+ 
+coroutine.resume(Rejoin)
+end)
+MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'Insert', NoUI = true, Text = 'Menu keybind' })
+MenuGroup:AddDivider()
+local playerCountLabel = MenuGroup:AddLabel("Player Count: 0", nil, true)
+local function updatePlayerCount()
+local playerCount = #game:GetService("Players"):GetPlayers()
+playerCountLabel:SetText("Players Online : " .. playerCount)
+end
+game:GetService("Players").PlayerAdded:Connect(updatePlayerCount)
+game:GetService("Players").PlayerRemoving:Connect(updatePlayerCount)
+updatePlayerCount()
+MenuGroup:AddLabel('Credits', true)
+MenuGroup:AddLabel('👻Oxide👻', true)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+
+ThemeManager:SetFolder('OxidePD')
+SaveManager:SetFolder('OxidePD/PD')
+
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+
+ThemeManager:ApplyToTab(Tabs['UI Settings'])
+
+SaveManager:LoadAutoloadConfig()
+wait(0)Library:Notify("oxide.pro made by 👻 .oxidepro. 👻 ")
+wait(0)Library:Notify("Status : 📗 Undetected 👻")
